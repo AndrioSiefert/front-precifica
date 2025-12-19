@@ -33,4 +33,4 @@ CMD ["serve", "-s", "dist", "-l", "3250"]
 # docker build \
 #   --build-arg VITE_API_URL=https://api.precifica.gestaosincronia.com.br \
 #   -t precifica-front:latest \
-#   -f front-precifica/Dockerfile front-precifica
+#   -f Dockerfile .
