@@ -63,7 +63,6 @@ export default function FinalizePurchaseCapturePage() {
                     return;
                 }
 
-                // defaults
                 setName('');
                 setCostUnit('');
                 setQuantity('1');
@@ -91,7 +90,7 @@ export default function FinalizePurchaseCapturePage() {
                     }
                 }
             } catch {
-                setError('Erro ao carregar captura');
+            setError('Erro ao carregar captura');
             } finally {
                 setLoading(false);
             }
@@ -161,12 +160,16 @@ export default function FinalizePurchaseCapturePage() {
             dto.updatedField = 'sale';
         } else {
             const m = toNumberOrUndefined(markup);
-            if (m === undefined || m < 0) {
-                setError('Margem inválida.');
-                return;
+            if (m !== undefined) {
+                if (m < 0) {
+                    setError('Margem inválida.');
+                    return;
+                }
+                dto.markupOverridePercent = m;
+                dto.updatedField = 'markup';
+            } else {
+                dto.updatedField = undefined;
             }
-            dto.markupOverridePercent = m;
-            dto.updatedField = 'markup';
         }
 
         try {
@@ -313,7 +316,7 @@ export default function FinalizePurchaseCapturePage() {
                                     }
                                 >
                                     <Icon name='currency' className='h-4 w-4' />
-                                    Preço de venda
+                                    Preco de venda
                                 </button>
                             </div>
 
@@ -327,7 +330,7 @@ export default function FinalizePurchaseCapturePage() {
                                         placeholder='Ex: 150'
                                         inputMode='decimal'
                                     />
-                                    <p className='mt-1 text-xs text-slate-600'>Vai calcular o preço de venda com base no custo.</p>
+                                    <p className='mt-1 text-xs text-slate-600'>Deixe vazio para usar a margem da pasta ou global.</p>
                                 </div>
                             ) : (
                                 <div className='mt-3'>

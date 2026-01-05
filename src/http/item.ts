@@ -18,6 +18,15 @@ export type Item = {
     markupOverridePercent?: number | null;
     saleUnitManual?: number | null;
 
+    batchId?: string | null;
+    batch?: {
+        id: string;
+        purchasedOn: string;
+        title: string | null;
+        notes: string | null;
+        defaultMarkupPercent: number | null;
+    } | null;
+
     purchasedAt?: string | null;
     createdAt?: string;
     updatedAt?: string;
@@ -101,4 +110,8 @@ export async function updatePricingSettings(defaultMarkupPercent: number): Promi
 export async function resetPricingSettings(): Promise<PricingSettings> {
     const { data } = await api.patch<PricingSettings>('/pricing-settings/reset');
     return data;
+}
+
+export async function deleteItem(id: string): Promise<void> {
+    await api.delete(`/items/${id}`);
 }

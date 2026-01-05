@@ -17,7 +17,9 @@ type IconName =
     | 'list'
     | 'eye'
     | 'download'
-    | 'edit';
+    | 'edit'
+    | 'trash'
+    | 'folder';
 
 type Props = {
     name: IconName;
@@ -185,6 +187,23 @@ export function Icon({ name, className }: Props) {
                 <svg className={className} viewBox='0 0 24 24' fill='none' strokeWidth='1.8'>
                     <path className={common} d='m14.5 5 4 4L8.5 19H5v-3.5Z' />
                     <path className={common} d='m13 6.5 4 4' />
+                </svg>
+            );
+        case 'trash':
+            return (
+                <svg className={className} viewBox='0 0 24 24' fill='none' strokeWidth='1.8'>
+                    <path className={common} d='M5 7h14' />
+                    <path className={common} d='M10 11v6' />
+                    <path className={common} d='M14 11v6' />
+                    <path className={common} d='M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7' />
+                    <path className={common} d='M7 7.5 7.6 18a1.5 1.5 0 0 0 1.5 1.4h5.8A1.5 1.5 0 0 0 16.4 18L17 7.5' />
+                </svg>
+            );
+        case 'folder':
+            return (
+                <svg className={className} viewBox='0 0 24 24' fill='none' strokeWidth='1.8'>
+                    <path className={common} d='M4 8a2 2 0 0 1 2-2h3l1.6 2.2H19a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' />
+                    <path className={common} d='M4 10h17' />
                 </svg>
             );
         default:

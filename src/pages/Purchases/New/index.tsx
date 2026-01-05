@@ -7,6 +7,7 @@ type FormState = {
     purchasedOn: string; // YYYY-MM-DD
     title: string;
     notes: string;
+    defaultMarkupPercent: string;
 };
 
 export default function NewPurchaseBatchPage() {
@@ -16,6 +17,7 @@ export default function NewPurchaseBatchPage() {
         purchasedOn: '',
         title: '',
         notes: '',
+        defaultMarkupPercent: '',
     });
 
     const [loading, setLoading] = useState(false);
@@ -34,12 +36,22 @@ export default function NewPurchaseBatchPage() {
             return;
         }
 
+        const markupRaw = form.defaultMarkupPercent.trim().replace(',', '.');
+        const markupNumber =
+            markupRaw === '' ? undefined : Number(markupRaw);
+
+        if (markupRaw && (!Number.isFinite(markupNumber) || (markupNumber as number) < 0)) {
+            setError('Margem da pasta invalida.');
+            return;
+        }
+
         try {
             setLoading(true);
             const batch = await createPurchaseBatch({
                 purchasedOn: form.purchasedOn.trim(),
                 title: form.title.trim() ? form.title.trim() : null,
                 notes: form.notes.trim() ? form.notes.trim() : null,
+                defaultMarkupPercent: markupNumber,
             });
             nav(`/compras/${batch.id}`);
         } catch {
@@ -56,8 +68,10 @@ export default function NewPurchaseBatchPage() {
                     <div className='inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] uppercase text-slate-600 shadow-sm'>
                         <Icon name='cart' className='h-3.5 w-3.5' /> Nova compra
                     </div>
-                    <h1 className='mt-2 text-3xl font-semibold text-slate-900 tracking-tight'>Criar lote</h1>
-                    <p className='text-sm text-slate-600'>Crie a pasta do dia (ex.: 10/01/2026) e depois envie as fotos.</p>
+                    <h1 className='mt-2 text-3xl font-semibold text-slate-900 tracking-tight'>Criar pasta</h1>
+                    <p className='text-sm text-slate-600'>
+                        Crie a pasta do dia (ex.: 10/01/2026), defina a margem padrao desta pasta e depois envie as fotos.
+                    </p>
                 </div>
 
                 <Link to='/compras' className='inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900'>
@@ -81,21 +95,35 @@ export default function NewPurchaseBatchPage() {
                             className='mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-slate-300 focus:ring'
                             required
                         />
-                        <p className='mt-1 text-xs text-slate-500'>Essa data será aplicada em todos os itens finalizados deste lote.</p>
+                        <p className='mt-1 text-xs text-slate-500'>Essa data sera aplicada em todos os itens finalizados deste lote.</p>
                     </div>
 
                     <div>
-                        <label className='block text-xs text-slate-500'>Título</label>
+                        <label className='block text-xs text-slate-500'>Titulo</label>
                         <input
                             value={form.title}
                             onChange={(e) => set('title', e.target.value)}
                             className='mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-slate-300 focus:ring'
-                            placeholder='Ex: SP Janeiro, Feirão, Outlet...'
+                            placeholder='Ex: SP Janeiro, Feirao, Outlet...'
                         />
                     </div>
 
+                    <div>
+                        <label className='block text-xs text-slate-500'>Margem da pasta (%)</label>
+                        <input
+                            value={form.defaultMarkupPercent}
+                            onChange={(e) => set('defaultMarkupPercent', e.target.value)}
+                            className='mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-slate-300 focus:ring'
+                            placeholder='Ex: 150'
+                            inputMode='decimal'
+                        />
+                        <p className='mt-1 text-xs text-slate-500'>
+                            Opcional. Vale apenas para esta pasta. Pastas diferentes não compartilham a mesma margem.
+                        </p>
+                    </div>
+
                     <div className='sm:col-span-2'>
-                        <label className='block text-xs text-slate-500'>Observações</label>
+                        <label className='block text-xs text-slate-500'>Observacoes</label>
                         <textarea
                             value={form.notes}
                             onChange={(e) => set('notes', e.target.value)}

@@ -4,6 +4,7 @@ export type PurchaseBatch = {
     id: string;
     purchasedOn: string; // YYYY-MM-DD
     title: string | null;
+    defaultMarkupPercent: number | null;
     notes: string | null;
     createdAt?: string;
     updatedAt?: string;
@@ -41,6 +42,7 @@ export type PurchaseReport = {
         id: string;
         purchasedOn: string;
         title: string | null;
+        defaultMarkupPercent: number | null;
         notes: string | null;
     };
     summary: {
@@ -65,6 +67,7 @@ export async function createPurchaseBatch(dto: {
     purchasedOn: string;
     title?: string | null;
     notes?: string | null;
+    defaultMarkupPercent?: number | null;
 }): Promise<PurchaseBatch> {
     const { data } = await api.post<PurchaseBatch>('/purchase-batches', dto);
     return data;
@@ -72,7 +75,7 @@ export async function createPurchaseBatch(dto: {
 
 export async function updatePurchaseBatch(
     id: string,
-    dto: { purchasedOn?: string; title?: string | null; notes?: string | null },
+    dto: { purchasedOn?: string; title?: string | null; notes?: string | null; defaultMarkupPercent?: number | null },
 ): Promise<PurchaseBatch> {
     const { data } = await api.patch<PurchaseBatch>(`/purchase-batches/${id}`, dto);
     return data;
@@ -127,10 +130,18 @@ export async function getPurchaseReport(batchId: string): Promise<PurchaseReport
     return data;
 }
 
+export async function deletePurchaseCapture(captureId: string): Promise<void> {
+    await api.delete(`/purchase-captures/${captureId}`);
+}
+
 export function purchaseReportPdfUrl(batchId: string) {
     const raw = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
     const base = String(raw).replace(/\/$/, '');
     return `${base}/purchase-batches/${batchId}/report.pdf`;
+}
+
+export async function deletePurchaseBatch(id: string): Promise<void> {
+    await api.delete(`/purchase-batches/${id}`);
 }
 
 export function resolveApiUrl(maybeUrl: string | null) {

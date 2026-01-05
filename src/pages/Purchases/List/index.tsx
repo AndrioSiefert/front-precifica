@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../../components/Icon';
-import { listPurchaseBatches, purchaseReportPdfUrl, type PurchaseBatch } from '../../../http/purchase';
+import { deletePurchaseBatch, listPurchaseBatches, purchaseReportPdfUrl, type PurchaseBatch } from '../../../http/purchase';
 
 function formatDateBR(iso: string) {
     // iso: YYYY-MM-DD
     const [y, m, d] = (iso ?? '').split('-');
     if (!y || !m || !d) return iso;
     return `${d}/${m}/${y}`;
+}
+
+function formatPercent(v: number | null) {
+    if (v === null || v === undefined) return '-';
+    return `${v}%`;
 }
 
 export default function PurchasesListPage() {
@@ -25,8 +30,7 @@ export default function PurchasesListPage() {
             if (silent) setRefreshing(true);
 
             const data = await listPurchaseBatches();
-            // mais recente primeiro (purchasedOn desc)
-            const sorted = [...data].sort((a, b) => (a.purchasedOn < b.purchasedOn ? 1 : -1));
+            const sorted = [...(Array.isArray(data) ? data : [])].sort((a, b) => (a.purchasedOn < b.purchasedOn ? 1 : -1));
             setBatches(sorted);
         } catch {
             setError('Erro ao carregar compras');
@@ -50,6 +54,19 @@ export default function PurchasesListPage() {
         });
     }, [batches, q]);
 
+    async function handleDelete(id: string) {
+        const confirm = window.confirm('Tem certeza que deseja excluir esta pasta? Isso remove itens e fotos associados.');
+        if (!confirm) return;
+
+        try {
+            setError(null);
+            await deletePurchaseBatch(id);
+            setBatches((prev) => prev.filter((b) => b.id !== id));
+        } catch {
+            setError('Erro ao excluir pasta');
+        }
+    }
+
     return (
         <div className='space-y-6'>
             <div className='flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between'>
@@ -59,7 +76,7 @@ export default function PurchasesListPage() {
                     </div>
                     <h1 className='mt-2 text-3xl font-semibold text-slate-900 tracking-tight'>Lotes e fotos</h1>
                     <p className='text-sm text-slate-600'>
-                        Crie uma compra, envie fotos e finalize para virar item. Visual renovado para navegar rápido em listas longas.
+                        Crie uma compra, envie fotos e finalize para virar item. Cada pasta pode ter margem padrao sem impactar as outras.
                     </p>
                 </div>
 
@@ -136,7 +153,12 @@ export default function PurchasesListPage() {
                                     <p className='text-sm text-slate-500'>Sem observações</p>
                                 )}
 
-                                <p className='text-xs text-slate-500'>ID: {b.id}</p>
+                                <div className='flex flex-wrap items-center gap-2 text-xs text-slate-600'>
+                                    <span className='rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5'>
+                                        Margem da pasta: <b className='text-slate-900'>{formatPercent(b.defaultMarkupPercent)}</b>
+                                    </span>
+                                    <span className='text-slate-500'>ID: {b.id}</span>
+                                </div>
                             </div>
 
                             <div className='flex flex-wrap gap-2 sm:justify-end'>
@@ -157,6 +179,15 @@ export default function PurchasesListPage() {
                                     <Icon name='pdf' className='h-4 w-4' />
                                     PDF
                                 </a>
+
+                                <button
+                                    type='button'
+                                    onClick={() => handleDelete(b.id)}
+                                    className='inline-flex h-10 items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 shadow-sm hover:border-rose-300 hover:text-rose-800'
+                                >
+                                    <Icon name='trash' className='h-4 w-4' />
+                                    Excluir
+                                </button>
                             </div>
                         </div>
                     </div>

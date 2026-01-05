@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     getPricingSettings,
     listItems,
@@ -6,11 +7,13 @@ import {
     updatePricingSettings,
     updateItem,
     resetItemPricing,
+    deleteItem,
     type Item,
     type PricingSettings,
 } from '../../../http/item';
 import { Icon } from '../../../components/Icon';
 import ItemCard from '../components/ItemCard';
+import { listPurchaseBatches, type PurchaseBatch } from '../../../http/purchase';
 
 type ModeFilter = 'all' | 'sale' | 'markup' | 'global' | 'unset';
 
@@ -27,8 +30,10 @@ function countByMode(items: Item[]) {
 }
 
 export default function ItemsListPage() {
+    const [searchParams] = useSearchParams();
     const [items, setItems] = useState<Item[]>([]);
     const [settings, setSettings] = useState<PricingSettings | null>(null);
+    const [batches, setBatches] = useState<PurchaseBatch[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -36,7 +41,12 @@ export default function ItemsListPage() {
 
     const [error, setError] = useState<string | null>(null);
 
-    const [q, setQ] = useState('');
+    const initialQ = searchParams.get('q') ?? '';
+    const [q, setQ] = useState(initialQ);
+
+    useEffect(() => {
+        setQ(initialQ);
+    }, [initialQ]);
     const [modeFilter, setModeFilter] = useState<ModeFilter>('all');
 
     const [globalMarkupInput, setGlobalMarkupInput] = useState<string>('');
@@ -49,12 +59,16 @@ export default function ItemsListPage() {
             if (!silent) setLoading(true);
             if (silent) setRefreshing(true);
 
-            const [s, data] = await Promise.all([getPricingSettings(), listItems()]);
+            const [s, data, batchesData] = await Promise.all([getPricingSettings(), listItems(), listPurchaseBatches()]);
             setSettings(s);
             setGlobalMarkupInput(s.defaultMarkupPercent === null ? '' : String(s.defaultMarkupPercent));
             setItems(Array.isArray(data) ? data : []);
+            const sortedBatches = Array.isArray(batchesData)
+                ? [...batchesData].sort((a, b) => (a.purchasedOn < b.purchasedOn ? 1 : -1))
+                : [];
+            setBatches(sortedBatches);
         } catch {
-            setError('Erro ao carregar itens/configurações');
+            setError('Erro ao carregar itens/configuracoes');
         } finally {
             if (!silent) setLoading(false);
             if (silent) setRefreshing(false);
@@ -78,7 +92,7 @@ export default function ItemsListPage() {
         if (!qq) return base;
 
         return base.filter((it) => {
-            const hay = `${it.name ?? ''} ${it.id ?? ''}`.toLowerCase();
+            const hay = `${it.name ?? ''} ${it.id ?? ''} ${it.batch?.title ?? ''} ${it.batch?.purchasedOn ?? ''}`.toLowerCase();
             return hay.includes(qq);
         });
     }, [items, q, modeFilter]);
@@ -99,7 +113,7 @@ export default function ItemsListPage() {
 
             const n = Number(s);
             if (!Number.isFinite(n) || n < 0) {
-                setError('Margem global inválida.');
+                setError('Margem global invalida.');
                 return;
             }
 
@@ -139,6 +153,28 @@ export default function ItemsListPage() {
         setItems((prev) => prev.map((it) => (it.id === id ? updated : it)));
     }
 
+    async function handleChangeBatch(id: string, batchId: string | null) {
+        try {
+            setError(null);
+            const updated = await updateItem(id, { batchId });
+            setItems((prev) => prev.map((it) => (it.id === id ? updated : it)));
+        } catch (err) {
+            setError('Erro ao mover item de pasta');
+            throw err;
+        }
+    }
+
+    async function handleDeleteItem(id: string) {
+        try {
+            setError(null);
+            await deleteItem(id);
+            setItems((prev) => prev.filter((it) => it.id !== id));
+        } catch (err) {
+            setError('Erro ao excluir item');
+            throw err;
+        }
+    }
+
     const globalStatusLabel =
         settings?.defaultMarkupPercent === null ? 'Não definida' : `${settings?.defaultMarkupPercent}%`;
 
@@ -151,7 +187,7 @@ export default function ItemsListPage() {
                     </div>
                     <h1 className='mt-2 text-3xl font-semibold text-slate-900 tracking-tight'>Precificação</h1>
                     <p className='text-sm text-slate-600'>
-                        Ajuste a margem global e personalize por item. Layout claro para listas longas e leitura rápida.
+                        Ajuste a margem global, configure margens por pasta e personalize por item. Layout claro para listas longas e leitura rápida.
                     </p>
                 </div>
 
@@ -177,7 +213,7 @@ export default function ItemsListPage() {
                             </span>
                         </div>
                         <p className='text-xs text-slate-600'>
-                            Itens em <b>GLOBAL</b> usam essa margem. Se estiver vazia, alguns itens ficam <b>SEM PREÇO</b>.
+                            Itens em <b>GLOBAL</b> usam essa margem se a pasta não tiver margem própria.
                         </p>
                     </div>
 
@@ -209,7 +245,7 @@ export default function ItemsListPage() {
                                 className='inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-700 hover:border-slate-300 hover:text-slate-900 disabled:opacity-60'
                                 type='button'
                                 disabled={savingGlobal}
-                                title='Limpa a margem global (volta para null)'
+                                title='Limpa a margem global (volta para vazio)'
                             >
                                 Limpar
                             </button>
@@ -223,12 +259,14 @@ export default function ItemsListPage() {
                             <Icon name='percent' className='h-4 w-4' /> GLOBAL
                         </div>
                         <div className='text-lg font-semibold text-slate-900'>{stats.global}</div>
+                        <div className='mt-1 text-[11px] text-slate-500'>Usando margem da pasta (se houver) ou a global abaixo.</div>
                     </div>
                     <div className='rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm'>
                         <div className='flex items-center gap-2 text-[11px] text-slate-600'>
                             <Icon name='percent' className='h-4 w-4' /> ITEM
                         </div>
                         <div className='text-lg font-semibold text-slate-900'>{stats.markup}</div>
+                        <div className='mt-1 text-[11px] text-slate-500'>Margem por item.</div>
                     </div>
                     <div className='rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm'>
                         <div className='flex items-center gap-2 text-[11px] text-slate-600'>
@@ -238,10 +276,14 @@ export default function ItemsListPage() {
                     </div>
                     <div className='rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm'>
                         <div className='flex items-center gap-2 text-[11px] text-slate-600'>
-                            <Icon name='sparkle' className='h-4 w-4' /> SEM PREÇO
+                            <Icon name='sparkle' className='h-4 w-4' /> SEM PRECO
                         </div>
                         <div className='text-lg font-semibold text-slate-900'>{stats.unset}</div>
                     </div>
+                </div>
+
+                <div className='mt-3 text-xs text-slate-600'>
+                    Dica: cada pasta (compra) pode ter sua própria margem padrão, configurada na tela da pasta. Ela não afeta outras pastas.
                 </div>
             </div>
 
@@ -256,7 +298,7 @@ export default function ItemsListPage() {
                                     value={q}
                                     onChange={(e) => setQ(e.target.value)}
                                     className='w-full bg-transparent py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400'
-                                    placeholder='nome ou id...'
+                                    placeholder='nome, id ou pasta...'
                                 />
                             </div>
                         </div>
@@ -274,7 +316,7 @@ export default function ItemsListPage() {
                                     <option value='global'>GLOBAL</option>
                                     <option value='markup'>ITEM</option>
                                     <option value='sale'>MANUAL</option>
-                                    <option value='unset'>SEM PREÇO</option>
+                                    <option value='unset'>SEM PRECO</option>
                                 </select>
                             </div>
                         </div>
@@ -303,6 +345,9 @@ export default function ItemsListPage() {
                         item={item}
                         onUpdateItem={handleUpdateItem}
                         onResetPricing={handleResetItem}
+                        onChangeBatch={handleChangeBatch}
+                        onDelete={handleDeleteItem}
+                        batches={batches}
                     />
                 ))}
             </div>

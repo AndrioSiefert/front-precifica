@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../components/Icon';
 import type { Item } from '../../../http/item';
+import type { PurchaseBatch } from '../../../http/purchase';
 
 function formatMoneyBRL(value?: number | null) {
     if (value === null || value === undefined || Number.isNaN(value)) return '-';
@@ -15,6 +16,13 @@ function formatNumber(value?: number | null) {
 function formatPercent(value?: number | null) {
     if (value === null || value === undefined || Number.isNaN(value)) return '-';
     return `${formatNumber(value)}%`;
+}
+
+function formatDateBR(iso?: string | null) {
+    if (!iso) return '-';
+    const [y, m, d] = iso.split('-');
+    if (!y || !m || !d) return iso;
+    return `${d}/${m}/${y}`;
 }
 
 function formatDateTime(value?: string | null) {
@@ -35,9 +43,12 @@ type Props = {
     item: Item;
     onUpdateItem: (id: string, dto: Record<string, any>) => Promise<void>;
     onResetPricing: (id: string) => Promise<void>;
+    onChangeBatch: (id: string, batchId: string | null) => Promise<void>;
+    onDelete: (id: string) => Promise<void>;
+    batches: PurchaseBatch[];
 };
 
-export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) {
+export default function ItemCard({ item, onUpdateItem, onResetPricing, onChangeBatch, onDelete, batches }: Props) {
     const pricing = item.pricing;
 
     const badge = useMemo(() => {
@@ -46,15 +57,18 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
         if (mode === 'markup') return { text: 'Item', cls: 'bg-cyan-50 text-cyan-700 border-cyan-100' };
         if (mode === 'global') return { text: 'Global', cls: 'bg-emerald-50 text-emerald-700 border-emerald-100' };
         if (mode === 'unset') return { text: 'Sem preço', cls: 'bg-rose-50 text-rose-700 border-rose-100' };
-        return { text: '—', cls: 'bg-slate-100 text-slate-700 border-slate-200' };
+        return { text: '?', cls: 'bg-slate-100 text-slate-700 border-slate-200' };
     }, [pricing?.pricingMode]);
 
     const [markupInput, setMarkupInput] = useState<string>(
         item.markupOverridePercent == null ? '' : String(item.markupOverridePercent),
     );
     const [saleInput, setSaleInput] = useState<string>(item.saleUnitManual == null ? '' : String(item.saleUnitManual));
+    const [batchSelect, setBatchSelect] = useState<string>(item.batch?.id ?? '');
 
     const [saving, setSaving] = useState(false);
+    const [changingBatch, setChangingBatch] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [localError, setLocalError] = useState<string | null>(null);
 
     const [photoOpen, setPhotoOpen] = useState(false);
@@ -62,9 +76,12 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
     useEffect(() => {
         setMarkupInput(item.markupOverridePercent == null ? '' : String(item.markupOverridePercent));
         setSaleInput(item.saleUnitManual == null ? '' : String(item.saleUnitManual));
+        setBatchSelect(item.batch?.id ?? '');
         setLocalError(null);
         setSaving(false);
-    }, [item.id, item.markupOverridePercent, item.saleUnitManual]);
+        setChangingBatch(false);
+        setDeleting(false);
+    }, [item.id, item.markupOverridePercent, item.saleUnitManual, item.batch?.id]);
 
     const serverMarkup = item.markupOverridePercent ?? null;
     const serverSale = item.saleUnitManual ?? null;
@@ -77,6 +94,8 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
 
     const totalCost =
         typeof item.costUnit === 'number' && typeof item.quantity === 'number' ? item.costUnit * item.quantity : null;
+    const defaultMarkupLabel = formatPercent(pricing?.defaultMarkupPercent ?? null);
+    const currentBatchLabel = item.batch ? batchLabel(item.batch) : 'Sem pasta';
 
     async function handleSaveMarkup() {
         try {
@@ -146,10 +165,47 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
             setSaving(true);
             await onResetPricing(item.id);
         } catch {
-            setLocalError('Erro ao voltar para global');
+            setLocalError('Erro ao voltar para margem global/pasta');
         } finally {
             setSaving(false);
         }
+    }
+
+    async function handleChangeBatchSelect(nextId: string) {
+        const previous = item.batch?.id ?? '';
+        setBatchSelect(nextId);
+        if (nextId === previous) return;
+
+        try {
+            setLocalError(null);
+            setChangingBatch(true);
+            await onChangeBatch(item.id, nextId || null);
+        } catch {
+            setLocalError('Erro ao mover o item de pasta');
+            setBatchSelect(previous);
+        } finally {
+            setChangingBatch(false);
+        }
+    }
+
+    async function handleDelete() {
+        const confirmed = window.confirm('Tem certeza que deseja excluir este item? Essa ação não pode ser desfeita.');
+        if (!confirmed) return;
+
+        try {
+            setLocalError(null);
+            setDeleting(true);
+            await onDelete(item.id);
+        } catch {
+            setLocalError('Erro ao excluir item');
+        } finally {
+            setDeleting(false);
+        }
+    }
+
+    function batchLabel(batch: PurchaseBatch) {
+        const title = batch.title?.trim() ? batch.title : formatDateBR(batch.purchasedOn);
+        return `${title} • ${formatDateBR(batch.purchasedOn)}`;
     }
 
     return (
@@ -273,21 +329,30 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
                             <button
                                 type='button'
                                 onClick={handleUseGlobal}
-                                disabled={saving}
+                                disabled={saving || changingBatch || deleting}
                                 className='inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:border-slate-300 hover:text-slate-900 disabled:opacity-60'
                                 title='Zera margem override e preço manual'
                             >
                                 <Icon name='percent' className='h-4 w-4' />
-                                Usar global
+                                Usar margem padrao
                             </button>
                             <button
                                 type='button'
                                 onClick={handleCancelEdits}
-                                disabled={saving || (!markupDirty && !saleDirty)}
+                                disabled={saving || (!markupDirty && !saleDirty) || deleting}
                                 className='inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:border-slate-300 hover:text-slate-900 disabled:opacity-60'
                             >
                                 <Icon name='refresh' className='h-4 w-4' />
                                 Cancelar
+                            </button>
+                            <button
+                                type='button'
+                                onClick={handleDelete}
+                                disabled={deleting}
+                                className='inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm hover:border-rose-300 hover:text-rose-800 disabled:opacity-60'
+                            >
+                                <Icon name='trash' className='h-4 w-4' />
+                                {deleting ? 'Excluindo...' : 'Excluir'}
                             </button>
                         </div>
                     </div>
@@ -296,7 +361,7 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
                         <div className='rounded-2xl border border-slate-200 bg-slate-50 p-4'>
                             <div className='flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-600'>
                                 <Icon name='currency' className='h-4 w-4' />
-                                Preço efetivo
+                                Preco efetivo
                             </div>
                             <div className='mt-1 text-lg font-semibold text-slate-900'>
                                 {formatMoneyBRL(pricing?.saleUnitEffective ?? null)}
@@ -316,7 +381,7 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
                         <div className='rounded-2xl border border-slate-200 bg-slate-50 p-4'>
                             <div className='flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-600'>
                                 <Icon name='sparkle' className='h-4 w-4' />
-                                Lucro unitário
+                                Lucro unitario
                             </div>
                             <div className='mt-1 text-lg font-semibold text-slate-900'>
                                 {formatMoneyBRL(pricing?.profitUnit ?? null)}
@@ -326,15 +391,51 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
 
                     {pricing?.pricingMode === 'unset' ? (
                         <div className='rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700'>
-                            Este item está <b>sem preço</b>. Defina a <b>margem global</b> ou informe margem/preço neste item.
+                            Este item está <b>sem preço</b>. Defina a margem da pasta ou a margem global, ou informe margem/preço neste item.
                         </div>
                     ) : null}
+
+                    <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'>
+                        <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+                            <div className='flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-600'>
+                                <Icon name='folder' className='h-4 w-4' />
+                                Pasta
+                            </div>
+                            <span className='rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-700'>
+                                Margem da pasta: <b className='text-slate-900'>{formatPercent(item.batch?.defaultMarkupPercent ?? null)}</b>
+                            </span>
+                        </div>
+                        <div className='mt-2 flex flex-col gap-2 sm:flex-row sm:items-end'>
+                            <div className='flex-1'>
+                                <label className='block text-xs text-slate-500'>Mover item para pasta</label>
+                                <select
+                                    value={batchSelect}
+                                    onChange={(e) => handleChangeBatchSelect(e.target.value)}
+                                    disabled={changingBatch || deleting || saving}
+                                    className='mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-slate-300 focus:ring'
+                                >
+                                    <option value=''>Sem pasta</option>
+                                    {batches.map((b) => (
+                                        <option key={b.id} value={b.id}>
+                                            {batchLabel(b)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className='text-xs text-slate-600 sm:w-64'>
+                                Pasta atual: <b className='text-slate-900'>{currentBatchLabel}</b>
+                            </div>
+                        </div>
+                        <div className='mt-1 text-[11px] text-slate-600'>
+                            Itens em modo GLOBAL usam a margem da pasta. Se a pasta não tiver margem, eles usam a margem global em Precificação.
+                        </div>
+                    </div>
 
                     <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
                         <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'>
                             <div className='flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-600'>
                                 <Icon name='currency' className='h-4 w-4' />
-                                Custo unitário
+                                Custo unitario
                             </div>
                             <div className='mt-1 text-sm font-semibold text-slate-900'>{formatMoneyBRL(item.costUnit ?? null)}</div>
                             <div className='mt-2 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-600'>
@@ -349,7 +450,7 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
                             </div>
                             <div className='mt-1 text-sm font-semibold text-slate-900'>{formatMoneyBRL(totalCost)}</div>
                             <div className='mt-2 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-700'>
-                                Global atual: <b className='text-slate-900'>{formatPercent(pricing?.defaultMarkupPercent ?? null)}</b>
+                                Margem padrao (pasta/global): <b className='text-slate-900'>{defaultMarkupLabel}</b>
                             </div>
                         </div>
 
@@ -382,11 +483,11 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
                                 <button
                                     type='button'
                                     onClick={handleUseGlobal}
-                                    disabled={saving}
+                                    disabled={saving || deleting || changingBatch}
                                     className='inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:border-slate-300 hover:text-slate-900 disabled:opacity-60'
                                 >
                                     <Icon name='percent' className='h-4 w-4' />
-                                    Voltar para global
+                                    Voltar para margem padrao
                                 </button>
                             </div>
                         </div>
@@ -411,22 +512,22 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
                                     <button
                                         type='button'
                                         onClick={handleSaveMarkup}
-                                        disabled={saving || !markupDirty}
+                                        disabled={saving || !markupDirty || deleting}
                                         className='shrink-0 rounded-xl border border-slate-300 bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-300 disabled:opacity-60'
-                                        title={markupDirty ? 'Salvar margem' : 'Sem alterações'}
+                                        title={markupDirty ? 'Salvar margem' : 'Sem alteracoes'}
                                     >
                                         {saving ? '...' : 'Salvar'}
                                     </button>
                                 </div>
                                 <div className='mt-2 text-[11px] text-slate-600'>
-                                    Dica: deixar vazio e salvar = <b>voltar pro global</b>.
+                                    Dica: deixar vazio e salvar = <b>voltar para margem padrao</b>.
                                 </div>
                             </div>
 
                             <div className='rounded-2xl border border-slate-200 bg-slate-50 p-4'>
                                 <div className='flex items-center gap-2 text-xs text-slate-700'>
                                     <Icon name='currency' className='h-4 w-4' />
-                                    Preço manual (R$)
+                                    Preco manual (R$)
                                 </div>
                                 <div className='mt-2 flex gap-2'>
                                     <input
@@ -442,7 +543,7 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
                                     <button
                                         type='button'
                                         onClick={handleSaveSale}
-                                        disabled={saving || !saleDirty}
+                                        disabled={saving || !saleDirty || deleting}
                                         className='shrink-0 rounded-xl border border-slate-300 bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-300 disabled:opacity-60'
                                         title={saleDirty ? 'Salvar preço manual' : 'Sem alterações'}
                                     >
@@ -450,7 +551,7 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
                                     </button>
                                 </div>
                                 <div className='mt-2 text-[11px] text-slate-600'>
-                                    Ao salvar, a <b>margem efetiva</b> é recalculada.
+                                    Ao salvar, a <b>margem efetiva</b> e recalculada.
                                 </div>
                             </div>
                         </div>
