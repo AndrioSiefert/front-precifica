@@ -1,1 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
+
+@layer base {
+    :root {
+        font-family: 'Space Grotesk', 'Segoe UI', system-ui, -apple-system, sans-serif;
+        color: #0f172a;
+        background-color: #f6f7fb;
+    }
+
+    body {
+        @apply bg-slate-50 text-slate-900 antialiased;
+        background-image:
+            radial-gradient(circle at 20% 20%, rgba(148, 163, 184, 0.18), transparent 32%),
+            radial-gradient(circle at 80% 0%, rgba(226, 232, 240, 0.35), transparent 30%),
+            linear-gradient(135deg, #f9fafb, #eef1f6);
+        min-height: 100vh;
+    }
+
+    ::selection {
+        background: rgba(148, 163, 184, 0.35);
+        color: #0f172a;
+    }
+}

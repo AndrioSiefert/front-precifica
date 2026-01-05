@@ -40,6 +40,18 @@ export async function listItems(): Promise<Item[]> {
     return data;
 }
 
+export async function getItem(id: string): Promise<Item> {
+    try {
+        const { data } = await api.get<Item>(`/items/${id}`);
+        return data;
+    } catch {
+        const all = await listItems();
+        const found = all.find((i) => i.id === id);
+        if (!found) throw new Error('Item not found');
+        return found;
+    }
+}
+
 /**
  * Nest endpoint expects multipart with field name: "photo"
  */

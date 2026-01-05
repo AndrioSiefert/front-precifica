@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Icon } from '../../../components/Icon';
 import type { Item } from '../../../http/item';
 
 function formatMoneyBRL(value?: number | null) {
@@ -41,11 +42,11 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
 
     const badge = useMemo(() => {
         const mode = pricing?.pricingMode;
-        if (mode === 'sale') return { text: 'MANUAL', cls: 'bg-yellow-50 text-yellow-900 border-yellow-200' };
-        if (mode === 'markup') return { text: 'ITEM', cls: 'bg-blue-50 text-blue-900 border-blue-200' };
-        if (mode === 'global') return { text: 'GLOBAL', cls: 'bg-green-50 text-green-900 border-green-200' };
-        if (mode === 'unset') return { text: 'SEM PREÇO', cls: 'bg-red-50 text-red-900 border-red-200' };
-        return { text: '—', cls: 'bg-gray-50 text-gray-700 border-gray-200' };
+        if (mode === 'sale') return { text: 'Manual', cls: 'bg-amber-50 text-amber-700 border-amber-100' };
+        if (mode === 'markup') return { text: 'Item', cls: 'bg-cyan-50 text-cyan-700 border-cyan-100' };
+        if (mode === 'global') return { text: 'Global', cls: 'bg-emerald-50 text-emerald-700 border-emerald-100' };
+        if (mode === 'unset') return { text: 'Sem preço', cls: 'bg-rose-50 text-rose-700 border-rose-100' };
+        return { text: '—', cls: 'bg-slate-100 text-slate-700 border-slate-200' };
     }, [pricing?.pricingMode]);
 
     const [markupInput, setMarkupInput] = useState<string>(
@@ -152,23 +153,25 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
     }
 
     return (
-        <div className='rounded-2xl border bg-white p-4 shadow-sm'>
+        <div className='rounded-3xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-200/60'>
             {photoOpen && item.photoUrl ? (
                 <div
-                    className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4'
+                    className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4'
                     onClick={() => setPhotoOpen(false)}
                     role='dialog'
                     aria-modal='true'
                 >
                     <div
-                        className='relative w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-xl'
+                        className='relative w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl'
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className='flex items-center justify-between border-b px-4 py-3'>
-                            <div className='truncate text-sm font-semibold'>{item.name}</div>
+                        <div className='flex items-center justify-between border-b border-slate-100 px-4 py-3'>
+                            <div className='flex items-center gap-2 text-sm font-semibold text-slate-900'>
+                                <Icon name='photo' className='h-4 w-4' /> {item.name}
+                            </div>
                             <button
                                 type='button'
-                                className='rounded-lg border px-3 py-1 text-sm hover:bg-gray-50'
+                                className='rounded-lg border border-slate-200 px-3 py-1 text-xs text-slate-700 hover:border-slate-300 hover:text-slate-900'
                                 onClick={() => setPhotoOpen(false)}
                             >
                                 Fechar
@@ -182,9 +185,9 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
             ) : null}
 
             <div className='flex flex-col gap-4 lg:flex-row'>
-                <div className='w-full lg:w-52'>
+                <div className='w-full lg:w-64'>
                     <div
-                        className='aspect-square w-full overflow-hidden rounded-2xl border bg-gray-50'
+                        className='relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50'
                         role={item.photoUrl ? 'button' : undefined}
                         tabIndex={item.photoUrl ? 0 : -1}
                         onClick={() => item.photoUrl && setPhotoOpen(true)}
@@ -194,36 +197,42 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
                         title={item.photoUrl ? 'Clique para ampliar' : undefined}
                     >
                         {item.photoUrl ? (
-                            <img
-                                src={item.photoUrl}
-                                alt={item.name}
-                                className='h-full w-full object-cover'
-                                loading='lazy'
-                                referrerPolicy='no-referrer'
-                                onError={(e) => {
-                                    const el = e.currentTarget;
-                                    el.style.display = 'none';
-                                    const parent = el.parentElement;
-                                    if (parent) {
-                                        parent.innerHTML =
-                                            '<div class="flex h-full w-full items-center justify-center text-xs text-gray-500">Imagem indisponível</div>';
-                                    }
-                                }}
-                            />
+                            <>
+                                <img
+                                    src={item.photoUrl}
+                                    alt={item.name}
+                                    className='h-full w-full object-cover transition hover:scale-[1.02]'
+                                    loading='lazy'
+                                    referrerPolicy='no-referrer'
+                                    onError={(e) => {
+                                        const el = e.currentTarget;
+                                        el.style.display = 'none';
+                                    }}
+                                />
+                                <div className='pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent' />
+                            </>
                         ) : (
-                            <div className='flex h-full w-full items-center justify-center text-xs text-gray-500'>
+                            <div className='flex h-full w-full flex-col items-center justify-center gap-2 text-xs text-slate-500'>
+                                <Icon name='camera' className='h-5 w-5' />
                                 Sem foto
                             </div>
                         )}
+                        <div className='absolute left-3 top-3 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-2 py-1 text-[11px] uppercase tracking-wide text-slate-600 backdrop-blur'>
+                            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold bg-gradient-to-r ${badge.cls}`}>
+                                {badge.text}
+                            </span>
+                            <span className='text-slate-500'>#{String(item.id).slice(0, 6)}</span>
+                        </div>
                     </div>
 
-                    <div className='mt-3 flex gap-2'>
+                    <div className='mt-3 grid grid-cols-2 gap-2'>
                         <button
                             type='button'
-                            className='w-full rounded-lg border px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-60'
+                            className='flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:border-slate-300 hover:text-slate-900 disabled:opacity-50'
                             disabled={!item.photoUrl}
                             onClick={() => item.photoUrl && setPhotoOpen(true)}
                         >
+                            <Icon name='eye' className='h-4 w-4' />
                             Ver foto
                         </button>
 
@@ -232,118 +241,162 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
                                 href={item.photoUrl}
                                 target='_blank'
                                 rel='noreferrer'
-                                className='w-full rounded-lg bg-black px-3 py-2 text-center text-sm text-white hover:opacity-90'
+                                className='flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-300'
                             >
+                                <Icon name='download' className='h-4 w-4' />
                                 Abrir
                             </a>
-                        ) : null}
+                        ) : (
+                            <div className='flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500'>
+                                Sem link
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 <div className='min-w-0 flex-1 space-y-4'>
-                    <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
-                        <div className='min-w-0'>
+                    <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
+                        <div className='min-w-0 space-y-1'>
+                            <div className='inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] uppercase text-slate-600 shadow-sm'>
+                                <Icon name='list' className='h-3.5 w-3.5' /> Item
+                            </div>
                             <div className='flex flex-wrap items-center gap-2'>
-                                <h3 className='truncate text-xl font-semibold'>{item.name}</h3>
-                                <span className={`rounded-full border px-2 py-0.5 text-xs ${badge.cls}`}>
+                                <h3 className='truncate text-xl font-semibold text-slate-900'>{item.name}</h3>
+                                <span className={`rounded-full border bg-gradient-to-r px-2 py-0.5 text-xs font-semibold ${badge.cls}`}>
                                     {badge.text}
                                 </span>
                             </div>
-                            <div className='mt-1 truncate text-xs text-gray-500'>{item.id}</div>
+                            <div className='mt-1 truncate text-xs text-slate-500'>ID: {item.id}</div>
                         </div>
 
-                        <button
-                            type='button'
-                            onClick={handleUseGlobal}
-                            disabled={saving}
-                            className='rounded-lg border px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-60'
-                            title='Zera margem override e preço manual'
-                        >
-                            Usar global
-                        </button>
+                        <div className='flex flex-wrap gap-2 md:justify-end'>
+                            <button
+                                type='button'
+                                onClick={handleUseGlobal}
+                                disabled={saving}
+                                className='inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:border-slate-300 hover:text-slate-900 disabled:opacity-60'
+                                title='Zera margem override e preço manual'
+                            >
+                                <Icon name='percent' className='h-4 w-4' />
+                                Usar global
+                            </button>
+                            <button
+                                type='button'
+                                onClick={handleCancelEdits}
+                                disabled={saving || (!markupDirty && !saleDirty)}
+                                className='inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:border-slate-300 hover:text-slate-900 disabled:opacity-60'
+                            >
+                                <Icon name='refresh' className='h-4 w-4' />
+                                Cancelar
+                            </button>
+                        </div>
                     </div>
 
-                    <div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
-                        <div className='rounded-2xl border bg-gray-50 p-4'>
-                            <div className='text-[11px] text-gray-600'>Preço efetivo</div>
-                            <div className='mt-1 text-lg font-semibold'>
+                    <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
+                        <div className='rounded-2xl border border-slate-200 bg-slate-50 p-4'>
+                            <div className='flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-600'>
+                                <Icon name='currency' className='h-4 w-4' />
+                                Preço efetivo
+                            </div>
+                            <div className='mt-1 text-lg font-semibold text-slate-900'>
                                 {formatMoneyBRL(pricing?.saleUnitEffective ?? null)}
                             </div>
                         </div>
 
-                        <div className='rounded-2xl border bg-gray-50 p-4'>
-                            <div className='text-[11px] text-gray-600'>Margem efetiva</div>
-                            <div className='mt-1 text-lg font-semibold'>
+                        <div className='rounded-2xl border border-slate-200 bg-slate-50 p-4'>
+                            <div className='flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-600'>
+                                <Icon name='percent' className='h-4 w-4' />
+                                Margem efetiva
+                            </div>
+                            <div className='mt-1 text-lg font-semibold text-slate-900'>
                                 {formatPercent(pricing?.markupEffectivePercent ?? null)}
                             </div>
                         </div>
 
-                        <div className='rounded-2xl border bg-gray-50 p-4'>
-                            <div className='text-[11px] text-gray-600'>Lucro unitário</div>
-                            <div className='mt-1 text-lg font-semibold'>
+                        <div className='rounded-2xl border border-slate-200 bg-slate-50 p-4'>
+                            <div className='flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-600'>
+                                <Icon name='sparkle' className='h-4 w-4' />
+                                Lucro unitário
+                            </div>
+                            <div className='mt-1 text-lg font-semibold text-slate-900'>
                                 {formatMoneyBRL(pricing?.profitUnit ?? null)}
                             </div>
                         </div>
                     </div>
 
                     {pricing?.pricingMode === 'unset' ? (
-                        <div className='rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800'>
-                            Este item está <b>sem preço</b>. Defina a <b>margem global</b> ou informe margem/preço neste
-                            item.
+                        <div className='rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700'>
+                            Este item está <b>sem preço</b>. Defina a <b>margem global</b> ou informe margem/preço neste item.
                         </div>
                     ) : null}
 
-                    <div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
-                        <div className='rounded-2xl border bg-white p-4'>
-                            <div className='text-[11px] text-gray-600'>Custo unitário</div>
-                            <div className='mt-1 text-sm font-semibold'>{formatMoneyBRL(item.costUnit ?? null)}</div>
-                            <div className='mt-2 text-[11px] text-gray-500'>
-                                Qtd: <b>{formatNumber(item.quantity ?? null)}</b>
+                    <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
+                        <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'>
+                            <div className='flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-600'>
+                                <Icon name='currency' className='h-4 w-4' />
+                                Custo unitário
+                            </div>
+                            <div className='mt-1 text-sm font-semibold text-slate-900'>{formatMoneyBRL(item.costUnit ?? null)}</div>
+                            <div className='mt-2 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-600'>
+                                Qtd: <b className='text-slate-900'>{formatNumber(item.quantity ?? null)}</b>
                             </div>
                         </div>
 
-                        <div className='rounded-2xl border bg-white p-4'>
-                            <div className='text-[11px] text-gray-600'>Custo total</div>
-                            <div className='mt-1 text-sm font-semibold'>{formatMoneyBRL(totalCost)}</div>
-                            <div className='mt-2 text-[11px] text-gray-500'>
-                                Global atual: <b>{formatPercent(pricing?.defaultMarkupPercent ?? null)}</b>
+                        <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'>
+                            <div className='flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-600'>
+                                <Icon name='currency' className='h-4 w-4' />
+                                Custo total
+                            </div>
+                            <div className='mt-1 text-sm font-semibold text-slate-900'>{formatMoneyBRL(totalCost)}</div>
+                            <div className='mt-2 inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-700'>
+                                Global atual: <b className='text-slate-900'>{formatPercent(pricing?.defaultMarkupPercent ?? null)}</b>
                             </div>
                         </div>
 
-                        <div className='rounded-2xl border bg-white p-4'>
-                            <div className='text-[11px] text-gray-600'>Datas</div>
-                            <div className='mt-1 text-[11px] text-gray-700'>
-                                Compra: <b>{formatDateTime(item.purchasedAt ?? null)}</b>
+                        <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'>
+                            <div className='flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-600'>
+                                <Icon name='calendar' className='h-4 w-4' />
+                                Datas
                             </div>
-                            <div className='mt-1 text-[11px] text-gray-700'>
-                                Atualização: <b>{formatDateTime(item.updatedAt ?? null)}</b>
+                            <div className='mt-1 text-[11px] text-slate-700'>
+                                Compra: <b className='text-slate-900'>{formatDateTime(item.purchasedAt ?? null)}</b>
+                            </div>
+                            <div className='mt-1 text-[11px] text-slate-700'>
+                                Atualização: <b className='text-slate-900'>{formatDateTime(item.updatedAt ?? null)}</b>
                             </div>
                         </div>
                     </div>
 
-                    <div className='rounded-2xl border bg-white p-4'>
-                        <div className='flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between'>
-                            <div>
-                                <div className='text-sm font-semibold'>Editar precificação</div>
-                                <div className='text-xs text-gray-600'>
-                                    Salve <b>margem</b> (override) ou <b>preço manual</b>. Ao salvar um, o outro é
-                                    ignorado.
+                    <div className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'>
+                        <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+                            <div className='space-y-1'>
+                                <div className='inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] uppercase text-slate-600'>
+                                    <Icon name='edit' className='h-3.5 w-3.5' /> Editar precificação
+                                </div>
+                                <div className='text-xs text-slate-600'>
+                                    Salve <b>margem</b> (override) ou <b>preço manual</b>. Ao salvar um, o outro é ignorado.
                                 </div>
                             </div>
 
-                            <button
-                                type='button'
-                                onClick={handleCancelEdits}
-                                disabled={saving || (!markupDirty && !saleDirty)}
-                                className='h-10 rounded-lg border px-3 text-sm hover:bg-gray-50 disabled:opacity-60'
-                            >
-                                Cancelar alterações
-                            </button>
+                            <div className='flex flex-wrap gap-2'>
+                                <button
+                                    type='button'
+                                    onClick={handleUseGlobal}
+                                    disabled={saving}
+                                    className='inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:border-slate-300 hover:text-slate-900 disabled:opacity-60'
+                                >
+                                    <Icon name='percent' className='h-4 w-4' />
+                                    Voltar para global
+                                </button>
+                            </div>
                         </div>
 
                         <div className='mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2'>
-                            <div className='rounded-2xl border bg-gray-50 p-4'>
-                                <div className='text-xs text-gray-600'>Margem do item (override %)</div>
+                            <div className='rounded-2xl border border-slate-200 bg-slate-50 p-4'>
+                                <div className='flex items-center gap-2 text-xs text-slate-700'>
+                                    <Icon name='percent' className='h-4 w-4' />
+                                    Margem do item (override %)
+                                </div>
                                 <div className='mt-2 flex gap-2'>
                                     <input
                                         value={markupInput}
@@ -353,25 +406,28 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
                                         }}
                                         placeholder='ex: 180'
                                         inputMode='decimal'
-                                        className='w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none focus:ring'
+                                        className='w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-slate-300 focus:ring'
                                     />
                                     <button
                                         type='button'
                                         onClick={handleSaveMarkup}
                                         disabled={saving || !markupDirty}
-                                        className='shrink-0 rounded-lg bg-black px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-60'
+                                        className='shrink-0 rounded-xl border border-slate-300 bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-300 disabled:opacity-60'
                                         title={markupDirty ? 'Salvar margem' : 'Sem alterações'}
                                     >
                                         {saving ? '...' : 'Salvar'}
                                     </button>
                                 </div>
-                                <div className='mt-2 text-[11px] text-gray-500'>
+                                <div className='mt-2 text-[11px] text-slate-600'>
                                     Dica: deixar vazio e salvar = <b>voltar pro global</b>.
                                 </div>
                             </div>
 
-                            <div className='rounded-2xl border bg-gray-50 p-4'>
-                                <div className='text-xs text-gray-600'>Preço manual (R$)</div>
+                            <div className='rounded-2xl border border-slate-200 bg-slate-50 p-4'>
+                                <div className='flex items-center gap-2 text-xs text-slate-700'>
+                                    <Icon name='currency' className='h-4 w-4' />
+                                    Preço manual (R$)
+                                </div>
                                 <div className='mt-2 flex gap-2'>
                                     <input
                                         value={saleInput}
@@ -381,26 +437,26 @@ export default function ItemCard({ item, onUpdateItem, onResetPricing }: Props) 
                                         }}
                                         placeholder='ex: 280,00'
                                         inputMode='decimal'
-                                        className='w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none focus:ring'
+                                        className='w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-slate-300 focus:ring'
                                     />
                                     <button
                                         type='button'
                                         onClick={handleSaveSale}
                                         disabled={saving || !saleDirty}
-                                        className='shrink-0 rounded-lg bg-black px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-60'
+                                        className='shrink-0 rounded-xl border border-slate-300 bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-300 disabled:opacity-60'
                                         title={saleDirty ? 'Salvar preço manual' : 'Sem alterações'}
                                     >
                                         {saving ? '...' : 'Salvar'}
                                     </button>
                                 </div>
-                                <div className='mt-2 text-[11px] text-gray-500'>
+                                <div className='mt-2 text-[11px] text-slate-600'>
                                     Ao salvar, a <b>margem efetiva</b> é recalculada.
                                 </div>
                             </div>
                         </div>
 
                         {localError ? (
-                            <div className='mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700'>
+                            <div className='mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700'>
                                 {localError}
                             </div>
                         ) : null}
