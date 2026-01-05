@@ -80,9 +80,30 @@ export default function PurchaseBatchPage() {
                 getPurchaseReport(id),
             ]);
 
+            const safeRows = Array.isArray(r?.rows) ? r.rows : [];
+            const safeSummaryDefaults = {
+                itemsCount: 0,
+                pricedItemsCount: 0,
+                unpricedItemsCount: 0,
+                totalQuantity: 0,
+                totalCost: 0,
+                totalRevenue: 0,
+                totalProfit: 0,
+                defaultMarkupPercent: null as number | null,
+            };
+            const safeSummary = { ...safeSummaryDefaults, ...(r?.summary ?? {}) };
+
             setBatch(b);
             setCaptures(Array.isArray(c) ? c : []);
-            setReport(r);
+            setReport(
+                r
+                    ? {
+                          ...r,
+                          rows: safeRows,
+                          summary: safeSummary,
+                      }
+                    : null,
+            );
             setMarkupInput(b?.defaultMarkupPercent == null ? '' : String(b.defaultMarkupPercent));
         } catch {
             setError('Erro ao carregar compra');
